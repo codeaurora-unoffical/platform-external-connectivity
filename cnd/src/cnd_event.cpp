@@ -273,7 +273,6 @@ void cnd_event_loop(void)
 {
     int n;
     fd_set rfds;
-    int s_fdCommand;
 
     CNE_LOGV("cnd_event_loop: started, nfds=%d",nfds);
 

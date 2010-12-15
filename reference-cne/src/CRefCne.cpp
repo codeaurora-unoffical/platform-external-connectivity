@@ -118,7 +118,7 @@ CRefCne::CRefCne ()
 void CRefCne::RefCneCmdHdlr
 (
   int cmd,
-  int cmd_len,
+  int /* cmd_len */,
   void* pCmdDataPtr
 )
 {

@@ -112,32 +112,34 @@ static pthread_mutex_t s_writeMutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t s_startupMutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t s_startupCond = PTHREAD_COND_INITIALIZER;
 
-static pthread_mutex_t s_dispatchMutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_cond_t s_dispatchCond = PTHREAD_COND_INITIALIZER;
-
 static RequestInfo *s_pendingRequests = NULL;
-
-static RequestInfo *s_toDispatchHead = NULL;
-static RequestInfo *s_toDispatchTail = NULL;
 
 
 /*******************************************************************/
 static void dispatchVoid (Parcel& p, RequestInfo *pRI);
 static void dispatchString (Parcel& p, RequestInfo *pRI);
+#if 0
 static void dispatchStrings (Parcel& p, RequestInfo *pRI);
+#endif
 static void dispatchInts (Parcel& p, RequestInfo *pRI);
 static void dispatchWlanInfo(Parcel &p, RequestInfo *pRI);
 static void dispatchWwanInfo(Parcel &p, RequestInfo *pRI);
 static void dispatchWlanScanResults(Parcel &p, RequestInfo *pRI);
+#if 0
 static void dispatchRaw(Parcel& p, RequestInfo *pRI);
+#endif
 static void dispatchRatStatus(Parcel &p, RequestInfo *pRI);
 static void dispatchIproute2Cmd(Parcel &p, RequestInfo *pRI);
 static int responseInts(Parcel &p, void *response, size_t responselen);
+#if 0
 static int responseStrings(Parcel &p, void *response, size_t responselen);
+#endif
 static int responseString(Parcel &p, void *response, size_t responselen);
 static int responseVoid(Parcel &p, void *response, size_t responselen);
+#if 0
 static int responseRaw(Parcel &p, void *response, size_t responselen);
-static int responseStartTrans(Parcel &p, void *response, size_t responselen);
+static int responseStartTrans(Parcel &p, void *response, size_t responselen); 
+#endif
 static int sendResponseRaw (const void *data, size_t dataSize, int fdCommand);
 static int sendResponse (Parcel &p, int fd);
 static int rspCompatibleNws(Parcel &p, void *response, size_t responselen);
@@ -296,7 +298,7 @@ memsetString (char *s)
 
 /** Callee expects NULL */
 static void
-dispatchVoid (Parcel& p, RequestInfo *pRI)
+dispatchVoid (Parcel& /* p */, RequestInfo *pRI)
 {
 
     processCommand(pRI->pCI->commandNumber, NULL, 0, pRI);
@@ -306,9 +308,6 @@ dispatchVoid (Parcel& p, RequestInfo *pRI)
 static void
 dispatchString (Parcel& p, RequestInfo *pRI)
 {
-    status_t status;
-    size_t datalen;
-    size_t stringlen;
     char *string8 = NULL;
 
     string8 = strdupReadString(p);
@@ -326,6 +325,7 @@ dispatchString (Parcel& p, RequestInfo *pRI)
 }
 
 /** Callee expects const char ** */
+#if 0
 static void
 dispatchStrings (Parcel &p, RequestInfo *pRI)
 {
@@ -376,6 +376,7 @@ dispatchStrings (Parcel &p, RequestInfo *pRI)
 
     return;
 }
+#endif
 
 /** Callee expects const int * */
 static void
@@ -465,7 +466,6 @@ dispatchWlanScanResults(Parcel &p, RequestInfo *pRI)
     int32_t t;
     status_t status;
     CneWlanScanResultsType args;
-    int32_t numItems;
 
     status = p.readInt32 (&t);
 
@@ -601,6 +601,7 @@ dispatchIproute2Cmd(Parcel &p, RequestInfo *pRI)
     return;
 }
 
+#if 0
 static void
 dispatchRaw(Parcel &p, RequestInfo *pRI)
 {
@@ -627,6 +628,7 @@ dispatchRaw(Parcel &p, RequestInfo *pRI)
 
     return;
 }
+#endif
 
 static int
 writeData(int fd, const void *buffer, size_t len)
@@ -737,6 +739,7 @@ responseInts(Parcel &p, void *response, size_t responselen)
 }
 
 /** response is a char **, pointing to an array of char *'s */
+#if 0
 static int responseStrings(Parcel &p, void *response, size_t responselen)
 {
     int numStrings;
@@ -768,13 +771,13 @@ static int responseStrings(Parcel &p, void *response, size_t responselen)
     }
     return 0;
 }
-
+#endif
 
 /**
  * NULL strings are accepted
  * FIXME currently ignores responselen
  */
-static int responseString(Parcel &p, void *response, size_t responselen)
+static int responseString(Parcel& p, void* response, size_t /* responselen */)
 {
 
     CNE_LOGV("responseString called");
@@ -784,11 +787,12 @@ static int responseString(Parcel &p, void *response, size_t responselen)
     return 0;
 }
 
-static int responseVoid(Parcel &p, void *response, size_t responselen)
+static int responseVoid(Parcel& /* p */ , void* /* response */, size_t /* responselen */)
 {
     return 0;
 }
 
+#if 0
 static int responseRaw(Parcel &p, void *response, size_t responselen)
 {
     if (response == NULL && responselen != 0) {
@@ -806,7 +810,7 @@ static int responseRaw(Parcel &p, void *response, size_t responselen)
 
     return 0;
 }
-
+#endif
 
 static int rspCompatibleNws(Parcel &p, void *response, size_t responselen)
 {
@@ -922,7 +926,6 @@ static void onCommandsSocketClosed()
 
 static void unsolicitedMessage(int unsolMessage, void *data, size_t datalen, int fd)
 {
-    int unsolMessageIndex;
     int ret;
 
     if (s_registerCalled == 0) {
@@ -1044,24 +1047,19 @@ static void processCommandsCallback(int fd, void *param)
 
 }
 
-static void listenCallback (int fd, void *param)
+static void listenCallback (int fd, void* /* param */)
 {
     int ret;
     int err;
-    int is_cnm_svc_socket;
     RecordStream *p_rs;
-    int i;
-    char tmpBuf[10];
-    int32_t pid, pid2, pid3, pid4;
     struct sockaddr_un peeraddr;
     socklen_t socklen = sizeof (peeraddr);
     struct ucred creds;
     socklen_t szCreds = sizeof(creds);
-    struct passwd *pwd = NULL;
 
     assert (s_fdCommand < 0);
     assert (fd == s_fdListen);
-    s_fdCommand = accept(s_fdListen, (sockaddr *) &peeraddr, &socklen);
+    s_fdCommand = accept(fd, (sockaddr *) &peeraddr, &socklen);
 
     if (s_fdCommand < 0 ) {
       CNE_LOGD("Error on accept() errno:%d", errno);
@@ -1101,10 +1099,8 @@ static void listenCallback (int fd, void *param)
 
 
 static void *
-eventLoop(void *param)
+eventLoop(void* /* param */)
 {
-    int ret;
-    int filedes[2];
 
     CNE_LOGV ("eventLoop: s_started=%d", s_started);
 

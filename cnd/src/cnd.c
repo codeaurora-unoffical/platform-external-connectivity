@@ -24,8 +24,13 @@
 #include <cnd.h>
 #include "cutils/properties.h"
 
-int main (int argc, char **argv)
+int main (int argc, char **argv )
 {
+
+  /* to avoid unused variable warnings. */
+  argc = argc;
+  argv = argv;
+
   char prop_value[PROPERTY_VALUE_MAX] = {'\0'};
   int len = property_get("persist.cne.UseCne", prop_value, "none");
   prop_value[len] = '\0';

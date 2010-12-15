@@ -94,7 +94,7 @@ CRefCneRadio::CRefCneRadio
 
   SIDE EFFECTS  None
  ============================================================================*/
-CRefCneRadio::CRefCneRadio(const CRefCneRadio& radio)
+CRefCneRadio::CRefCneRadio(const CRefCneRadio& /* radio */)
 {
 }
 /*=============================================================================
