@@ -16,6 +16,7 @@ LOCAL_SHARED_LIBRARIES := \
         libutils \
         libcutils \
         libhardware_legacy \
+        libnetutils
 
 LOCAL_C_INCLUDES := \
         external/connectivity/cnd/inc  \
