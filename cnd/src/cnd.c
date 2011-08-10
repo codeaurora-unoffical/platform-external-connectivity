@@ -33,7 +33,6 @@ int main (int argc, char **argv)
      (strcasecmp(prop_value, "reference") == 0))
   {
     cnd_init();
-    cnd_cap_init();
     cnd_startEventLoop();
     while(1)
     {
