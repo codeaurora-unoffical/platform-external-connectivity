@@ -1,6 +1,6 @@
 /*
 ** Copyright 2006, The Android Open Source Project
-** Copyright (c) 2010, Code Aurora Forum. All rights reserved.
+** Copyright (c) 2010,2011, Code Aurora Forum. All rights reserved.
 **
 ** Licensed under the Apache License, Version 2.0 (the "License");
 ** you may not use this file except in compliance with the License.
@@ -49,6 +49,10 @@
 #include <cnd.h>
 #include <cne.h>
 #include <cnd_iproute2.h>
+
+#include <linux/capability.h>
+#include <linux/prctl.h>
+#include <private/android_filesystem_config.h>
 
 
 namespace android {
@@ -210,11 +214,13 @@ processCommand (int command, void *data, size_t datalen, CND_Token t)
       return;
     }
 
+    cnd_change_cap(AID_ROOT);
+
     cmd = ((int *)data)[0];
     ifName = ((unsigned char **)data)[1];
     ipAddr = ((unsigned char **)data)[2];
     gatewayAddr = ((unsigned char **)data)[3];
- 
+
     CNE_LOGV ("processCommand: iproute2cmd=%d, ipAddr=%s, gatewayAddr=%s, "
           "ifName=%s", cmd, ipAddr, gatewayAddr, ifName);
 
@@ -249,6 +255,8 @@ processCommand (int command, void *data, size_t datalen, CND_Token t)
         break;
       }
     }
+
+    cnd_change_cap(AID_RADIO);
 
     return;
 
@@ -1190,6 +1198,37 @@ cnd_init (void)
 
 }
 
+extern "C" void
+cnd_change_cap (int uid)
+{
+    __user_cap_header_struct hdr;
+    __user_cap_data_struct   data;
+
+    /* Gather Current Capabilities  */
+    hdr.version = _LINUX_CAPABILITY_VERSION;
+    hdr.pid = 0;
+    if (capget(&hdr, &data) < 0)
+      CNE_LOGE("cnd_change_cap could not gather current capabilities: %s\n",strerror(errno));
+
+    /* Do not clear capabilities when changind user id */
+    if (prctl(PR_SET_KEEPCAPS, 1, 0, 0, 0) < 0)
+      CNE_LOGE("cnd_change_cap could not keep capabilities prior to changing \
+          uid error: %s\n",strerror(errno));
+
+    /* Change uid */
+    if (setuid(uid) < 0)
+      CNE_LOGE("cnd_change_cap could change to uid: %d with erorr: %s",uid,strerror(errno));
+
+    /* Set new process capabilities */
+    data.effective = (1 << (CAP_NET_ADMIN)) |
+                     (1 << (CAP_NET_RAW)) |
+                     (1 << (CAP_SETUID)) |
+                     (1 << (CAP_SETPCAP));
+    data.permitted = data.effective;
+    data.inheritable = 0;
+    if (capset(&hdr, &data) < 0)
+      CNE_LOGE("cnd_change_cap could not set capabilities: %s\n",strerror(errno));
+}
 
 static void
 cnd_commandComplete(CND_Token t, CND_Errno e, void *response, size_t responselen)

@@ -1,6 +1,6 @@
 /*
 ** Copyright 2006, The Android Open Source Project
-** Copyright (c) 2010, Code Aurora Forum. All rights reserved.
+** Copyright (c) 2010,2011, Code Aurora Forum. All rights reserved.
 **
 ** Licensed under the Apache License, Version 2.0 (the "License");
 ** you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@
 #include <fcntl.h>
 #include <cnd.h>
 #include "cutils/properties.h"
+#include <private/android_filesystem_config.h>
 
 int main (int argc, char **argv)
 {
@@ -33,6 +34,7 @@ int main (int argc, char **argv)
      (strcasecmp(prop_value, "reference") == 0))
   {
     cnd_init();
+    cnd_change_cap(AID_RADIO);
     cnd_startEventLoop();
     while(1)
     {
