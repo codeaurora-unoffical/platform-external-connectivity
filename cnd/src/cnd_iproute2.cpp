@@ -54,6 +54,7 @@
 #include <map>
 #include <set>
 #include <cnd.h>
+#include <arpa/inet.h>
 
 using namespace std;
 
@@ -63,6 +64,14 @@ using namespace std;
 #undef LOG_TAG
 #define LOG_TAG "CND_IPROUTE2"
 #define LOCAL_TAG "CND_IPROUTE2_DEBUG"
+
+#ifndef INET_ADDRSTRLEN
+#define INET_ADDRSTRLEN 16
+#endif
+
+extern "C" int ifc_init(void);
+extern "C" void ifc_close(void);
+extern "C" int ifc_get_info(const char *name, in_addr_t *addr, in_addr_t *mask, unsigned *flags);
 
 /*----------------------------------------------------------------------------
  * Type Declarations
@@ -128,6 +137,9 @@ static const int32_t MIN_TABLE_NUMBER            = 1;
 // Table #253 is the 'defined' default routing table, which should not
 // be overwritten
 static const int32_t MAX_TABLE_NUMBER            = 252;
+
+// Table #253 is the main (or default) table
+static const int32_t MAIN_TABLE_NUMBER           = 253;
 
 // Priority number 32766 diverts packets to the main table (Table #254)
 static const int32_t MAX_PRIORITY_NUMBER         = 32765;
@@ -197,6 +209,13 @@ bool modifyRoutingTable
   uint8_t *sourcePrefix,
   uint8_t *gatewayAddress,
   Cmd_line_actions commandAction
+);
+
+bool addRouteForLocalTraffic(
+  uint8_t *deviceName,
+  uint8_t *sourcePrefix,
+  Cmd_line_actions commandAction,
+  int table
 );
 
 bool modifyRule
@@ -1198,6 +1217,7 @@ bool modifyRoutingTable
                   CMD_LINE_TABLE_NUMBER,
                   (uint8_t *)tableNumberString,
                   NULL);
+    addRouteForLocalTraffic(deviceName, sourcePrefix, commandAction, tableNumber);
   }
 
   switch(commandAction)
@@ -1271,6 +1291,78 @@ bool modifyRoutingTable
   }
 
   return modifyRuleRetValue;
+}
+
+
+/*----------------------------------------------------------------------------
+ * FUNCTION      addRouteForLocalTraffic
+
+ * DESCRIPTION   Adds a route for local traffic that does not need to use
+                 the default gateway.
+
+ * DEPENDENCIES  commandAction should be ADD, IPv4 is assumed, uses
+                 libnetutils
+
+ * RETURN VALUE  bool - True if function is successful. False otherwise.
+
+ * SIDE EFFECTS  None
+ *--------------------------------------------------------------------------*/
+bool addRouteForLocalTraffic(
+  uint8_t *deviceName,
+  uint8_t *sourcePrefix,
+  Cmd_line_actions commandAction,
+  int table)
+{
+  if (commandAction != ACTIONS_ADD_ENUM
+      || table == MAIN_TABLE_NUMBER) {
+    return true; // no action needed
+  }
+
+  // test sourcePrefix to make sure it's a valid IPv4 address
+  sockaddr_in tmp;
+  if (inet_pton(AF_INET, (char*)sourcePrefix, &(tmp.sin_addr)) != 1) {
+    // not a valid IPv4 address
+    return false;
+  }
+
+  // Length of an IPv4 address in CIDR notation
+  const static int INET_CIDR_ADDRSTRLEN = INET_ADDRSTRLEN + 3;
+
+  in_addr addr, mask, net; // source address, netmask, and network address
+  char net_ip_addr[INET_ADDRSTRLEN]; // network address as a string
+  char network[INET_CIDR_ADDRSTRLEN]; // network address in CIDR notation
+  char table_s[MAX_DIGITS_TABLE_NUMBER]; // table string
+
+  snprintf(table_s, MAX_DIGITS_TABLE_NUMBER, "%d", table);
+
+  // grab info from interface
+  ifc_init();
+  ifc_get_info((char*)deviceName, &(addr.s_addr), &(mask.s_addr), NULL);
+  ifc_close();
+
+  // calculate network address
+  net.s_addr = (addr.s_addr & mask.s_addr);
+  int prefixLength = 0;
+  uint32_t n = mask.s_addr;
+  while (n > 0) {
+    if ((n % 2) == 1) prefixLength++;
+    n /= 2;
+  }
+
+  // store network address in CIDR notation
+  inet_ntop(AF_INET, &(net.s_addr), net_ip_addr, INET_ADDRSTRLEN);
+  snprintf(network, INET_CIDR_ADDRSTRLEN, "%s/%d", net_ip_addr, prefixLength);
+
+  // "route add %s dev %s table %d", network, deviceName, table
+  return cmdLineCaller(
+      ROUTING_CMD,
+      ACTIONS_ADD_STR,
+      network,
+      CMD_LINE_DEVICE_NAME,
+      deviceName,
+      CMD_LINE_TABLE_NUMBER,
+      table_s,
+      NULL);
 }
 
 /*----------------------------------------------------------------------------
