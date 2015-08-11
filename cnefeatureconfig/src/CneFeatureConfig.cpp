@@ -67,8 +67,7 @@ CneFeatureConfig::CneFeatureConfig():bCne(false),
     bFmc(false),
     bWqe(false),
     bNsrm(false),
-    bAtp(false),
-    bWqeLegacy(false)
+    bAtp(false)
 {
 }
 
@@ -101,14 +100,15 @@ void CneFeatureConfig::readFeature(void) {
             bFmc = true;
             break;
         }
-        case NSRM_CNE: // 4--> CNE enabled. NSRM mode.
+        case NSRM_CNE: // 3--> CNE enabled. NSRM mode.
         {
             bCne = true;
             bNsrm = true;
             break;
         }
-        case WQE_CNE: // 3--> CNE enabled. WQE mode.
+        case WQE_CNE: // 4--> CNE enabled. WQE mode.
         {
+            bCne = true;
             bWqe = true;
             break;
         }
@@ -147,12 +147,6 @@ void CneFeatureConfig::readFeature(void) {
             bWqe = true;
             break;
         }
-        case WQE_LEGACY_CNE: //99 --> CNE enabled. Legacy WQE mode.
-        {
-            bCne = true;
-            bWqeLegacy = true;
-            break;
-	}
         default:
             CFC_LOGW("Unknown feature value in property. Features disabled by default");
     }
@@ -175,9 +169,6 @@ bool CneFeatureConfig::isEnabled(Feature f) {
             break;
         case ATP:
             return bAtp;
-            break;
-        case WQE_LEGACY:
-            return bWqeLegacy;
             break;
         default:
             CFC_LOGW("Feature %d not known, returning default", f);

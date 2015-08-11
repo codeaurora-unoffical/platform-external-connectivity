@@ -40,7 +40,6 @@ enum Feature {
     WQE = 3,
     NSRM = 4,
     ATP = 5,
-    WQE_LEGACY=6,
 };
 
 #include <cutils/log.h>
@@ -100,7 +99,6 @@ private:
     bool bWqe;
     bool bNsrm;
     bool bAtp;
-    bool bWqeLegacy;
     /* Reads the CNE_FEATURE_PROP to determine which features
        are currently enabled.*/
     void readFeature(void);
@@ -127,7 +125,6 @@ private:
         ATP_CNE = 7, /* CNE feature is prerequisite */
         ATP_NSRM_CNE = 8, /* CNE feature is prerequisite */
         ATP_NSRM_WQE_CNE = 9, /* CNE feature is prerequisite */
-        WQE_LEGACY_CNE = 99, /*legacy WQE (with interface selection) is prerequisite*/
     };
 
 public:
